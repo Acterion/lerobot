@@ -29,6 +29,22 @@ lerobot-teleoperate \
     --display_data=true
 ```
 
+Example teleoperation with remote SO101 follower:
+
+```shell
+lerobot-teleoperate \
+    --robot.type=so101_client \
+    --robot.remote_ip=192.168.1.42 \
+    --robot.port_zmq_cmd=6000 \
+    --robot.port_zmq_observations=6001 \
+    --robot.cameras="{ front: {type: opencv, index_or_path: 0, width: 1920, height: 1080, fps: 30}}" \
+    --robot.id=remote_follower \
+    --teleop.type=so101_leader \
+    --teleop.port=/dev/tty.usbmodem58760431551 \
+    --teleop.id=blue \
+    --display_data=true
+```
+
 Example teleoperation with bimanual so100:
 
 ```shell
@@ -75,6 +91,7 @@ from lerobot.robots import (  # noqa: F401
     koch_follower,
     make_robot_from_config,
     so100_follower,
+    so101_client,
     so101_follower,
 )
 from lerobot.teleoperators import (  # noqa: F401
