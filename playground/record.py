@@ -10,7 +10,7 @@ from lerobot.utils.control_utils import init_keyboard_listener, is_headless
 from lerobot.utils.visualization_utils import init_rerun
 from headless_keyboard import init_headless_keyboard_listener, wait_for_ready, wait_for_next_session, cleanup_signal_files, QUIT_FILE
 from lerobot.utils.utils import log_say
-from lerobot.datasets.utils import hw_to_dataset_features
+from lerobot.datasets.utils import hw_to_dataset_features, load_episodes
 from lerobot.processor import make_default_processors
 
 NUM_EPISODES = 2  # Maximum episodes per session (set to 0 for unlimited)
@@ -50,6 +50,12 @@ action_features = hw_to_dataset_features(robot.action_features, "action")
 obs_features = hw_to_dataset_features(robot.observation_features, "observation")
 dataset_features = {**action_features, **obs_features}
 
+# Use batch_encoding_size > 1 to defer video encoding to the end of session
+# This avoids 1.5 min post-processing per episode - all videos are encoded at once at the end
+# Set to 0 or a large number to encode ALL at once when finalize() is called
+# Or set to NUM_EPISODES to batch per session
+BATCH_ENCODING_SIZE = 100  # Defer encoding - will encode on finalize()
+
 dataset=LeRobotDataset.create(
             repo_id="Acterion/" + DATASET_NAME,
             features=dataset_features,
@@ -57,6 +63,7 @@ dataset=LeRobotDataset.create(
             robot_type=robot.name,
             use_videos=True,
             image_writer_threads=4,
+            batch_encoding_size=BATCH_ENCODING_SIZE,
         )
 
 robot.connect()
@@ -179,7 +186,17 @@ while not events.get("quit_program", False):
         print("="*60 + "\n")
         
         if total_episodes > 0:
-            print("Finalizing and uploading dataset to HuggingFace...")
+            print("Encoding remaining videos and uploading dataset to HuggingFace...")
+            # Flush remaining unencoded videos if using batched encoding
+            if dataset.episodes_since_last_encoding > 0:
+                start_ep = dataset.num_episodes - dataset.episodes_since_last_encoding
+                print(f"Encoding {dataset.episodes_since_last_encoding} remaining episodes (episodes {start_ep} to {dataset.num_episodes - 1})...")
+                # Flush metadata writer so episodes parquet files are written to disk
+                dataset.meta._close_writer()
+                # Reload episodes metadata from disk before batch encoding
+                dataset.meta.episodes = load_episodes(dataset.root)
+                dataset._batch_save_episode_video(start_ep, dataset.num_episodes)
+                dataset.episodes_since_last_encoding = 0
             dataset.finalize()
             dataset.push_to_hub()
             print("✓ Upload complete!")
@@ -207,6 +224,16 @@ teleop.disconnect()
 
 # Finalize dataset to properly close parquet writers
 print("Finalizing dataset...")
+# Flush remaining unencoded videos if using batched encoding
+if dataset.episodes_since_last_encoding > 0:
+    start_ep = dataset.num_episodes - dataset.episodes_since_last_encoding
+    print(f"Encoding {dataset.episodes_since_last_encoding} remaining episodes (episodes {start_ep} to {dataset.num_episodes - 1})...")
+    # Flush metadata writer so episodes parquet files are written to disk
+    dataset.meta._close_writer()
+    # Reload episodes metadata from disk before batch encoding
+    dataset.meta.episodes = load_episodes(dataset.root)
+    dataset._batch_save_episode_video(start_ep, dataset.num_episodes)
+    dataset.episodes_since_last_encoding = 0
 dataset.finalize()
 print("✓ Dataset finalized!")
 

@@ -1210,6 +1210,13 @@ class LeRobotDataset(torch.utils.data.Dataset):
             video_ep_metadata = {}
             for video_key in self.meta.video_keys:
                 video_ep_metadata.update(self._save_episode_video(video_key, ep_idx))
+            
+            # Update meta.latest_episode with video metadata for next episode's reference
+            if self.meta.latest_episode is not None:
+                for key, value in video_ep_metadata.items():
+                    if key != "episode_index":
+                        self.meta.latest_episode[key] = [value]
+            
             video_ep_metadata.pop("episode_index")
             video_ep_df = pd.DataFrame(video_ep_metadata, index=[ep_idx]).convert_dtypes(
                 dtype_backend="pyarrow"
@@ -1326,7 +1333,11 @@ class LeRobotDataset(torch.utils.data.Dataset):
         ):
             # Initialize indices for a new dataset made of the first episode data
             chunk_idx, file_idx = 0, 0
-            if self.meta.episodes is not None and len(self.meta.episodes) > 0:
+            if (
+                self.meta.episodes is not None
+                and len(self.meta.episodes) > 0
+                and f"videos/{video_key}/chunk_index" in self.meta.episodes.column_names
+            ):
                 # It means we are resuming recording, so we need to load the latest episode
                 # Update the indices to avoid overwriting the latest episode
                 old_chunk_idx = self.meta.episodes[-1][f"videos/{video_key}/chunk_index"]
