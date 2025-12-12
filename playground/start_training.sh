@@ -1,0 +1,13 @@
+lerobot-train \ 
+  --policy.path=lerobot/smolvla_base \
+  --dataset.repo_id=Acterion/purple_marker_to_grey_box-1 \
+  --batch_size=32 \
+  --steps=20000 \
+  --save_freq=200 \
+  --eval_freq=200 \
+  --output_dir=outputs/train/my_smolvla_2 \
+  --policy.repo_id=Acterion/policy_purple_marker_to_grey_box-1 \
+  --job_name=my_smolvla_training \
+  --policy.device=mps \ # Use 'cuda' for NVIDIA GPUs, 'mps' for Apple Silicon, or 'cpu' for CPU-only
+  --wandb.enable=true \
+  --dataset.video_backend=pyav # Use 'pyav' on macOS or 'opencv' based on your setup
