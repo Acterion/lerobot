@@ -29,8 +29,8 @@ FPS = 30
 # =============================================================================
 
 # Robot serial ports
-FOLLOWER_PORT = "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5971081397-if00"
-LEADER_PORT = "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5970072149-if00"
+FOLLOWER_PORT = "/dev/ttyACM1"
+LEADER_PORT = "/dev/ttyACM0"
 
 # Robot type identifier
 ROBOT_TYPE = "so101"
@@ -58,12 +58,14 @@ CAMERAS = {
         fps=CAMERA_FPS,
         width=CAMERA_WIDTH,
         height=CAMERA_HEIGHT,
+        exposure=-6
     ),
     "camera2": OpenCVCameraConfig(
         index_or_path=CAMERA_INDICES["camera2"],
         fps=CAMERA_FPS,
         width=CAMERA_WIDTH,
         height=CAMERA_HEIGHT,
+        exposure=0.33
     ),
 }
 
